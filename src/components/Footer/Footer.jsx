@@ -59,12 +59,12 @@ const Footer = () => {
       <div className="container">
         {/* Main Glassmorphic Footer Container */}
         <div className="bg-white/95 dark:bg-gray-950/95 backdrop-blur-2xl rounded-t-[2.5rem] p-8 sm:p-14 shadow-2xl border-t border-x border-white/60 dark:border-gray-800/80">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
             {/* Brand Column */}
-            <div className="space-y-5 md:col-span-1">
+            <div className="space-y-5">
               <Link to="/" onClick={scrollToTop} className="flex items-center gap-3 group">
                 <img src={FooterLogo} alt="Wonder Cambodia Logo" className="h-12 w-auto transition-transform duration-300 group-hover:scale-105" />
-                <span className="bg-gradient-to-r from-primary via-cyan-500 to-secondary bg-clip-text text-transparent font-heading font-black text-2xl tracking-tight">
+                <span className="bg-gradient-to-r from-primary via-cyan-500 to-secondary bg-clip-text text-transparent font-heading font-black text-xl sm:text-2xl tracking-tight">
                   Wonder Cambodia
                 </span>
               </Link>

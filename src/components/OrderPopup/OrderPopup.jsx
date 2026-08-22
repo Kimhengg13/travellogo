@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useData } from "../../context/DataContext";
+import { useAuth } from "../../context/AuthContext";
 import { IoCloseOutline } from "react-icons/io5";
 import {
   FaCheckCircle,
@@ -14,6 +15,7 @@ import {
 
 const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
   const { addBooking } = useData();
+  const { currentUser, userProfile } = useAuth();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -26,6 +28,17 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [createdBooking, setCreatedBooking] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      setFormData((prev) => ({
+        ...prev,
+        name: prev.name || userProfile?.displayName || currentUser.displayName || "",
+        email: prev.email || currentUser.email || "",
+      }));
+    }
+  }, [currentUser, userProfile, orderPopup]);
 
   const pricePerPerson = selectedPlace?.price || 250;
   const guestCount = Number(formData.guests || 1);
@@ -35,24 +48,32 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.email) return;
 
-    const saved = addBooking({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      date: formData.date,
-      guests: guestCount,
-      notes: formData.notes,
-      placeId: selectedPlace?.id || null,
-      placeTitle: selectedPlace?.title || "Custom Cambodian Tour Package",
-      pricePerPerson: pricePerPerson,
-    });
+    setLoading(true);
+    try {
+      const saved = await addBooking({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        date: formData.date,
+        guests: guestCount,
+        notes: formData.notes,
+        placeId: selectedPlace?.id || null,
+        placeTitle: selectedPlace?.title || "Custom Cambodian Tour Package",
+        pricePerPerson: pricePerPerson,
+        userId: currentUser?.uid || null,
+      });
 
-    setCreatedBooking(saved);
-    setIsSubmitted(true);
+      setCreatedBooking(saved);
+      setIsSubmitted(true);
+    } catch (err) {
+      console.error("Booking creation error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -85,7 +106,7 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
                 {selectedPlace?.title ? `Book "${selectedPlace.title}"` : "Book Your Next Adventure"}
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Fill in your contact details below to reserve your Cambodian travel package.
+                Fill in your contact details below to reserve your Cambodian travel package in our database.
               </p>
             </div>
 
@@ -187,9 +208,16 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-primary to-secondary hover:shadow-glow text-white font-extrabold py-3.5 rounded-2xl text-sm transition-all duration-300 hover:scale-[1.02] active:scale-98 tracking-wide shadow-md flex items-center justify-center gap-2"
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:shadow-glow text-white font-extrabold py-3.5 rounded-2xl text-sm transition-all duration-300 hover:scale-[1.02] active:scale-98 tracking-wide shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <FaLock className="text-xs" /> Confirm & Reserve Now
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <FaLock className="text-xs" /> Confirm & Save to Database
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -203,10 +231,10 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
 
             <div className="space-y-2">
               <h2 className="text-2xl font-heading font-black text-gray-900 dark:text-white">
-                Booking Confirmed!
+                Booking Saved to Database!
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                Thank you <strong>{createdBooking?.customerName}</strong>! Your reservation has been recorded and transmitted to our concierge team.
+                Thank you <strong>{createdBooking?.customerName}</strong>! Your reservation has been recorded in our Firestore database.
               </p>
             </div>
 

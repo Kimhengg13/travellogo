@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { placesApi, bookingsApi, blogsApi, reviewsApi } from "../services/api";
 
 // Initial Cambodian Place Images
 import AngkorImg from "../assets/cambodia/angkor-wat.jpg";
@@ -402,7 +403,29 @@ export const DataProvider = ({ children }) => {
     }
   });
 
-  // Persist Changes
+  // Load from Firestore Database on Mount
+  useEffect(() => {
+    const loadFirestoreData = async () => {
+      try {
+        const [dbPlaces, dbBookings, dbBlogs, dbReviews] = await Promise.all([
+          placesApi.getPlaces(),
+          bookingsApi.getBookings(),
+          blogsApi.getBlogs(),
+          reviewsApi.getReviews(),
+        ]);
+        if (dbPlaces && dbPlaces.length > 0) setPlaces(dbPlaces);
+        if (dbBookings && dbBookings.length > 0) setBookings(dbBookings);
+        if (dbBlogs && dbBlogs.length > 0) setBlogs(dbBlogs);
+        if (dbReviews && dbReviews.length > 0) setReviews(dbReviews);
+      } catch (e) {
+        console.warn("Error fetching live Firestore collections, operating in local state mode:", e);
+      }
+    };
+
+    loadFirestoreData();
+  }, []);
+
+  // Persist Local Storage Backups
   useEffect(() => {
     try {
       localStorage.setItem("wc_places_data", JSON.stringify(places));
@@ -452,71 +475,98 @@ export const DataProvider = ({ children }) => {
   }, [settings]);
 
   // --- Booking Operations ---
-  const addBooking = (bookingData) => {
-    const newRef = "TG-" + Math.floor(100000 + Math.random() * 900000);
-    const guestNum = Number(bookingData.guests || 1);
-    const place = places.find((p) => p.id === Number(bookingData.placeId)) || null;
-    const pricePerPerson = Number(bookingData.pricePerPerson || place?.price || 250);
-    const totalPrice = guestNum * pricePerPerson;
+  const addBooking = async (bookingData) => {
+    let newBooking;
+    try {
+      newBooking = await bookingsApi.createBooking(bookingData, bookingData.userId || null);
+    } catch (e) {
+      console.warn("Firestore save failed, creating local booking record:", e);
+      const newRef = "TG-" + Math.floor(100000 + Math.random() * 900000);
+      const guestNum = Number(bookingData.guests || 1);
+      const place = places.find((p) => p.id === Number(bookingData.placeId)) || null;
+      const pricePerPerson = Number(bookingData.pricePerPerson || place?.price || 250);
+      const totalPrice = guestNum * pricePerPerson;
 
-    const newBooking = {
-      id: "BK-" + Date.now(),
-      ref: newRef,
-      customerName: bookingData.name || bookingData.customerName,
-      email: bookingData.email,
-      phone: bookingData.phone || "",
-      placeId: bookingData.placeId || (place ? place.id : null),
-      placeTitle: bookingData.placeTitle || (place ? place.title : "Custom Tour Package"),
-      date: bookingData.date || new Date().toISOString().split("T")[0],
-      guests: guestNum,
-      pricePerPerson,
-      totalPrice,
-      status: settings.autoConfirm ? "Confirmed" : "Pending",
-      notes: bookingData.notes || "",
-      createdAt: new Date().toISOString(),
-    };
+      newBooking = {
+        id: "BK-" + Date.now(),
+        ref: newRef,
+        customerName: bookingData.name || bookingData.customerName,
+        email: bookingData.email,
+        phone: bookingData.phone || "",
+        placeId: bookingData.placeId || (place ? place.id : null),
+        placeTitle: bookingData.placeTitle || (place ? place.title : "Custom Tour Package"),
+        date: bookingData.date || new Date().toISOString().split("T")[0],
+        guests: guestNum,
+        pricePerPerson,
+        totalPrice,
+        status: settings.autoConfirm ? "Confirmed" : "Pending",
+        notes: bookingData.notes || "",
+        userId: bookingData.userId || null,
+        createdAt: new Date().toISOString(),
+      };
+    }
 
     setBookings((prev) => [newBooking, ...prev]);
     return newBooking;
   };
 
-  const updateBookingStatus = (id, newStatus) => {
+  const updateBookingStatus = async (id, newStatus) => {
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
     );
+    try {
+      await bookingsApi.updateBookingStatus(id, newStatus);
+    } catch (e) {
+      console.error("Error syncing status update to Firestore:", e);
+    }
   };
 
-  const editBooking = (id, updatedFields) => {
+  const editBooking = async (id, updatedFields) => {
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updatedFields } : b))
     );
+    try {
+      await bookingsApi.editBooking(id, updatedFields);
+    } catch (e) {
+      console.error("Error syncing edit booking to Firestore:", e);
+    }
   };
 
-  const deleteBooking = (id) => {
+  const deleteBooking = async (id) => {
     setBookings((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await bookingsApi.deleteBooking(id);
+    } catch (e) {
+      console.error("Error deleting booking from Firestore:", e);
+    }
   };
 
   // --- Place / Tour Operations ---
-  const addPlace = (placeData) => {
-    const newPlace = {
-      id: Date.now(),
-      img: placeData.img || AngkorImg,
-      title: placeData.title,
-      location: placeData.location,
-      description: placeData.description,
-      price: Number(placeData.price),
-      type: placeData.type || "Cultural",
-      duration: placeData.duration || "3 Days / 2 Nights",
-      groupSize: placeData.groupSize || "Max 10 People",
-      featured: Boolean(placeData.featured),
-      rating: 5.0,
-      reviewsCount: 1,
-    };
+  const addPlace = async (placeData) => {
+    let newPlace;
+    try {
+      newPlace = await placesApi.addPlace(placeData);
+    } catch (e) {
+      newPlace = {
+        id: Date.now(),
+        img: placeData.img || AngkorImg,
+        title: placeData.title,
+        location: placeData.location,
+        description: placeData.description,
+        price: Number(placeData.price),
+        type: placeData.type || "Cultural",
+        duration: placeData.duration || "3 Days / 2 Nights",
+        groupSize: placeData.groupSize || "Max 10 People",
+        featured: Boolean(placeData.featured),
+        rating: 5.0,
+        reviewsCount: 1,
+      };
+    }
     setPlaces((prev) => [newPlace, ...prev]);
     return newPlace;
   };
 
-  const editPlace = (id, updatedFields) => {
+  const editPlace = async (id, updatedFields) => {
     setPlaces((prev) =>
       prev.map((p) =>
         p.id === id
@@ -528,38 +578,63 @@ export const DataProvider = ({ children }) => {
           : p
       )
     );
+    try {
+      await placesApi.updatePlace(id, updatedFields);
+    } catch (e) {
+      console.error("Error updating place in Firestore:", e);
+    }
   };
 
-  const deletePlace = (id) => {
+  const deletePlace = async (id) => {
     setPlaces((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await placesApi.deletePlace(id);
+    } catch (e) {
+      console.error("Error deleting place from Firestore:", e);
+    }
   };
 
   // --- Blog Operations ---
-  const addBlog = (blogData) => {
-    const newBlog = {
-      id: Date.now(),
-      image: blogData.image || AngkorImg,
-      title: blogData.title,
-      category: blogData.category || "Travel Guides",
-      description: blogData.description,
-      content: blogData.content || blogData.description,
-      author: blogData.author || "Wonder Cambodia Team",
-      authorRole: blogData.authorRole || "Travel Specialist",
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      readTime: blogData.readTime || "4 min read",
-    };
+  const addBlog = async (blogData) => {
+    let newBlog;
+    try {
+      newBlog = await blogsApi.addBlog(blogData);
+    } catch (e) {
+      newBlog = {
+        id: Date.now(),
+        image: blogData.image || AngkorImg,
+        title: blogData.title,
+        category: blogData.category || "Travel Guides",
+        description: blogData.description,
+        content: blogData.content || blogData.description,
+        author: blogData.author || "Wonder Cambodia Team",
+        authorRole: blogData.authorRole || "Travel Specialist",
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        readTime: blogData.readTime || "4 min read",
+      };
+    }
     setBlogs((prev) => [newBlog, ...prev]);
     return newBlog;
   };
 
-  const editBlog = (id, updatedFields) => {
+  const editBlog = async (id, updatedFields) => {
     setBlogs((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updatedFields } : b))
     );
+    try {
+      await blogsApi.updateBlog(id, updatedFields);
+    } catch (e) {
+      console.error("Error updating blog in Firestore:", e);
+    }
   };
 
-  const deleteBlog = (id) => {
+  const deleteBlog = async (id) => {
     setBlogs((prev) => prev.filter((b) => b.id !== id));
+    try {
+      await blogsApi.deleteBlog(id);
+    } catch (e) {
+      console.error("Error deleting blog from Firestore:", e);
+    }
   };
 
   const getBlogByIdOrSlug = (param) => {
@@ -574,37 +649,51 @@ export const DataProvider = ({ children }) => {
   };
 
   // --- Review Operations ---
-  const addReview = (reviewData) => {
-    const newReview = {
-      id: Date.now(),
-      name: reviewData.name,
-      role: reviewData.role || "Verified Explorer",
-      location: reviewData.location || "Cambodia Traveler",
-      text: reviewData.text,
-      rating: Number(reviewData.rating || 5),
-      img:
-        reviewData.img ||
-        "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
-      status: "Approved",
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    };
+  const addReview = async (reviewData) => {
+    let newReview;
+    try {
+      newReview = await reviewsApi.addReview(reviewData);
+    } catch (e) {
+      newReview = {
+        id: Date.now(),
+        name: reviewData.name,
+        role: reviewData.role || "Verified Explorer",
+        location: reviewData.location || "Cambodia Traveler",
+        text: reviewData.text,
+        rating: Number(reviewData.rating || 5),
+        img:
+          reviewData.img ||
+          "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+        status: "Approved",
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      };
+    }
     setReviews((prev) => [newReview, ...prev]);
     return newReview;
   };
 
-  const updateReviewStatus = (id, newStatus) => {
+  const updateReviewStatus = async (id, newStatus) => {
     setReviews((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
     );
+    try {
+      await reviewsApi.updateReviewStatus(id, newStatus);
+    } catch (e) {
+      console.error("Error updating review status in Firestore:", e);
+    }
   };
 
-  const deleteReview = (id) => {
+  const deleteReview = async (id) => {
     setReviews((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await reviewsApi.deleteReview(id);
+    } catch (e) {
+      console.error("Error deleting review from Firestore:", e);
+    }
   };
 
   // --- Admin Authentication ---
   const loginAdmin = (email, password) => {
-    // Demo admin credentials or bypass
     if (
       (email === "admin@wondercambodia.com" && password === "admin123") ||
       (email.trim().length > 0 && password.trim().length > 0)
@@ -630,7 +719,7 @@ export const DataProvider = ({ children }) => {
   };
 
   // --- Reset to Initial Seed Data ---
-  const resetToDefaultData = () => {
+  const resetToDefaultData = async () => {
     setPlaces(initialPlaces);
     setBookings(initialBookings);
     setBlogs(initialBlogs);
@@ -639,6 +728,14 @@ export const DataProvider = ({ children }) => {
     localStorage.removeItem("wc_bookings_data");
     localStorage.removeItem("wc_blogs_data");
     localStorage.removeItem("wc_reviews_data");
+    try {
+      await placesApi.seedPlaces();
+      await bookingsApi.seedBookings();
+      await blogsApi.seedBlogs();
+      await reviewsApi.seedReviews();
+    } catch (e) {
+      console.error("Error re-seeding Firestore:", e);
+    }
   };
 
   const value = {

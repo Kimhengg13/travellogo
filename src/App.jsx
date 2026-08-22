@@ -1,6 +1,8 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { DataProvider } from "./context/DataContext";
+import { AuthProvider } from "./context/AuthContext";
+import AuthModal from "./components/Auth/AuthModal";
 import Layout from "./pages/Layout";
 import Home from "./pages/Home";
 import Blogs from "./pages/Blogs";
@@ -8,6 +10,7 @@ import NoPage from "./pages/NoPage";
 import PlacesRoute from "./pages/PlacesRoute";
 import About from "./pages/About";
 import BlogsDetails from "./pages/BlogsDetails";
+import MyBookings from "./pages/MyBookings";
 
 // Admin Module Imports
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -36,43 +39,47 @@ const App = () => {
   }, []);
 
   return (
-    <DataProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Storefront Routes */}
-          <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
-            <Route path="blogs" element={<Blogs />} />
-            <Route path="blogs/:id" element={<BlogsDetails />} />
-            <Route path="best-places" element={<PlacesRoute />} />
-            <Route path="about" element={<About />} />
-            <Route path="*" element={<NoPage />} />
-          </Route>
+    <AuthProvider>
+      <DataProvider>
+        <BrowserRouter>
+          <AuthModal />
+          <Routes>
+            {/* Public Storefront Routes */}
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Home />} />
+              <Route path="blogs" element={<Blogs />} />
+              <Route path="blogs/:id" element={<BlogsDetails />} />
+              <Route path="best-places" element={<PlacesRoute />} />
+              <Route path="about" element={<About />} />
+              <Route path="my-bookings" element={<MyBookings />} />
+              <Route path="*" element={<NoPage />} />
+            </Route>
 
-          {/* Admin Authentication */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+            {/* Admin Authentication */}
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* Protected Admin Routes */}
-          <Route
-            path="/admin"
-            element={
-              <AdminAuthGuard>
-                <AdminLayout />
-              </AdminAuthGuard>
-            }
-          >
-            <Route index element={<AdminDashboard />} />
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="bookings" element={<AdminBookings />} />
-            <Route path="places" element={<AdminPlaces />} />
-            <Route path="blogs" element={<AdminBlogs />} />
-            <Route path="reviews" element={<AdminReviews />} />
-            <Route path="analytics" element={<AdminAnalytics />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </DataProvider>
+            {/* Protected Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <AdminAuthGuard>
+                  <AdminLayout />
+                </AdminAuthGuard>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="bookings" element={<AdminBookings />} />
+              <Route path="places" element={<AdminPlaces />} />
+              <Route path="blogs" element={<AdminBlogs />} />
+              <Route path="reviews" element={<AdminReviews />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </DataProvider>
+    </AuthProvider>
   );
 };
 

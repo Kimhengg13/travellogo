@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import Logo from "../../assets/logo.png";
 import { NavLink, Link, useNavigate, useLocation } from "react-router-dom";
-import { FaCaretDown, FaShieldAlt } from "react-icons/fa";
+import { FaCaretDown, FaShieldAlt, FaUser, FaSuitcase, FaSignOutAlt, FaUserPlus } from "react-icons/fa";
 import { BiSun, BiMoon } from "react-icons/bi";
 import ResponsiveMenu from "./ResponsiveMenu";
 import { HiMenuAlt3, HiMenuAlt1 } from "react-icons/hi";
+import { useAuth } from "../../context/AuthContext";
 
 export const NavbarLinks = [
   {
@@ -52,6 +53,8 @@ const Navbar = ({ handleOrderPopup }) => {
   );
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { currentUser, userProfile, openAuthModal, logout } = useAuth();
 
   useEffect(() => {
     const element = document.documentElement;
@@ -105,15 +108,15 @@ const Navbar = ({ handleOrderPopup }) => {
             <div className="flex items-center gap-3 font-extrabold text-2xl tracking-tight">
               <Link to={"/"} onClick={() => window.scrollTo(0, 0)} className="flex items-center gap-2 group">
                 <img src={Logo} alt="Wonder Cambodia Logo" className="h-12 w-auto transition-transform duration-300 group-hover:scale-105" />
-                <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-heading font-black text-2xl">
+                <span className="hidden sm:inline bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent font-heading font-black text-xl md:text-2xl">
                   Wonder Cambodia
                 </span>
               </Link>
             </div>
 
             {/* Desktop Navigation Links */}
-            <div className="hidden md:block">
-              <ul className="flex items-center gap-8 font-semibold text-sm">
+            <div className="hidden lg:block">
+              <ul className="flex items-center gap-4 xl:gap-8 font-semibold text-sm">
                 {NavbarLinks.map((link) => (
                   <li key={link.name} className="py-5">
                     <NavLink
@@ -133,9 +136,7 @@ const Navbar = ({ handleOrderPopup }) => {
 
                 {/* Dropdown */}
                 <li className="group relative cursor-pointer py-5">
-                  <span
-                    className="flex items-center gap-1 hover:text-primary transition-colors text-gray-700 dark:text-gray-200"
-                  >
+                  <span className="flex items-center gap-1 hover:text-primary transition-colors text-gray-700 dark:text-gray-200">
                     Quick Links
                     <FaCaretDown className="transition-transform duration-300 group-hover:rotate-180 text-primary" />
                   </span>
@@ -170,15 +171,6 @@ const Navbar = ({ handleOrderPopup }) => {
 
             {/* Actions & Buttons */}
             <div className="flex items-center gap-3">
-              {/* Admin Portal Shortcut Badge */}
-              <Link
-                to="/admin"
-                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:text-primary hover:bg-primary/10 transition-all border border-slate-200 dark:border-slate-700"
-              >
-                <FaShieldAlt className="text-amber-500 text-xs" />
-                <span>Admin</span>
-              </Link>
-
               {/* Dark/Light Theme Toggle */}
               <button
                 onClick={toggleTheme}
@@ -187,6 +179,75 @@ const Navbar = ({ handleOrderPopup }) => {
               >
                 {theme === "dark" ? <BiSun size={20} className="text-amber-400" /> : <BiMoon size={20} />}
               </button>
+
+              {/* User Authentication Menu / Button */}
+              {currentUser ? (
+                <div className="group relative py-2">
+                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-primary/10 border border-gray-200 dark:border-gray-700 transition-all">
+                    <img
+                      src={userProfile?.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.displayName || "User")}&background=0D9488&color=fff`}
+                      alt="User Avatar"
+                      className="w-7 h-7 rounded-full object-cover border border-primary"
+                    />
+                    <span className="hidden lg:inline text-xs font-extrabold max-w-[100px] truncate">
+                      {userProfile?.displayName || currentUser.displayName || "Account"}
+                    </span>
+                    <FaCaretDown className="text-xs text-primary transition-transform duration-300 group-hover:rotate-180" />
+                  </button>
+
+                  {/* Profile Dropdown Menu */}
+                  <div className="absolute right-0 top-full z-[9999] hidden w-56 rounded-2xl bg-white dark:bg-gray-900 p-3 text-gray-800 dark:text-gray-100 group-hover:block shadow-2xl border border-gray-100 dark:border-gray-800 backdrop-blur-md space-y-2">
+                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                      <p className="text-xs font-bold truncate">
+                        {userProfile?.displayName || currentUser.displayName || "Explorer"}
+                      </p>
+                      <p className="text-[11px] text-gray-400 truncate">{currentUser.email}</p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Link
+                        to="/my-bookings"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold hover:bg-primary/10 hover:text-primary transition-all"
+                      >
+                        <FaSuitcase className="text-primary text-xs" />
+                        <span>My Tour Bookings</span>
+                      </Link>
+
+                      <Link
+                        to="/admin"
+                        className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-all"
+                      >
+                        <FaShieldAlt className="text-xs" />
+                        <span>Admin Portal</span>
+                      </Link>
+
+                      <button
+                        onClick={logout}
+                        className="w-full flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition-all text-left"
+                      >
+                        <FaSignOutAlt className="text-xs" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="hidden sm:flex items-center gap-2">
+                  <button
+                    onClick={() => openAuthModal("signin")}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-extrabold bg-gray-100 dark:bg-gray-800 hover:bg-primary/10 hover:text-primary text-gray-700 dark:text-gray-200 transition-all border border-gray-200 dark:border-gray-700"
+                  >
+                    <FaUser className="text-primary text-[10px]" />
+                    <span>Sign In</span>
+                  </button>
+                  <button
+                    onClick={() => openAuthModal("register")}
+                    className="hidden lg:flex items-center gap-1 px-3 py-2 rounded-full text-xs font-extrabold text-primary hover:bg-primary/10 transition-all"
+                  >
+                    <FaUserPlus className="text-xs" /> Register
+                  </button>
+                </div>
+              )}
 
               {/* Book Now Button */}
               <button
@@ -197,7 +258,7 @@ const Navbar = ({ handleOrderPopup }) => {
               </button>
 
               {/* Mobile Hamburger Toggle */}
-              <div className="md:hidden block">
+              <div className="lg:hidden block">
                 {showMenu ? (
                   <HiMenuAlt1
                     onClick={toggleMenu}
