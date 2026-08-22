@@ -94,8 +94,8 @@ const MyBookings = () => {
               </div>
             </div>
             <div className="pt-2 flex flex-wrap items-center justify-between gap-4 border-t border-white/10">
-              <span className="text-xs font-semibold text-amber-400 flex items-center gap-1.5">
-                <FaCheckCircle /> Registered Live Firestore Database Account
+              <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
+                <FaCheckCircle /> Account Verified
               </span>
               <button
                 onClick={fetchBookings}

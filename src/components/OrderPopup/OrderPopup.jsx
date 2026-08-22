@@ -106,7 +106,7 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
                 {selectedPlace?.title ? `Book "${selectedPlace.title}"` : "Book Your Next Adventure"}
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Fill in your contact details below to reserve your Cambodian travel package in our database.
+                Fill in your contact details below to reserve your Cambodian travel package.
               </p>
             </div>
 
@@ -215,7 +215,7 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <FaLock className="text-xs" /> Confirm & Save to Database
+                      <FaLock className="text-xs" /> Confirm Booking
                     </>
                   )}
                 </button>
@@ -231,10 +231,10 @@ const OrderPopup = ({ orderPopup, setOrderPopup, selectedPlace }) => {
 
             <div className="space-y-2">
               <h2 className="text-2xl font-heading font-black text-gray-900 dark:text-white">
-                Booking Saved to Database!
+                Booking Confirmed!
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                Thank you <strong>{createdBooking?.customerName}</strong>! Your reservation has been recorded in our Firestore database.
+                Thank you <strong>{createdBooking?.customerName}</strong>! Your reservation has been successfully completed.
               </p>
             </div>
 
